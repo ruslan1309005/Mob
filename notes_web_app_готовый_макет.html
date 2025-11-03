@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Notes — веб-записная книжка</title>
+  <style>
+    :root{
+      --bg:#f6f8fa;
+      --card:#ffffff;
+      --muted:#6b7280;
+      --accent:#6366f1;
+      --danger:#ef4444;
+      --shadow:0 6px 18px rgba(14,20,30,0.08);
+      --radius:14px;
+      color-scheme: light;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;
+      background:linear-gradient(180deg,#f3f5ff 0%,var(--bg) 100%);
+      padding:28px;
+      color:#0f172a;
+    }
+
+    /* ==================== LOGIN ==================== */
+    .login-screen{
+      position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(180deg,#6366f1 0%,#4f46e5 100%);
+      z-index:2000;
+    }
+    .login-card{
+      background:white;color:#111827;border-radius:16px;
+      box-shadow:0 8px 22px rgba(0,0,0,0.25);
+      width:90%;max-width:360px;padding:24px;text-align:center;
+      animation:fadeIn .3s ease;
+    }
+    @keyframes fadeIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+    .login-card h2{margin-top:0}
+    .login-card input{
+      width:100%;padding:10px 12px;margin-bottom:12px;
+      border:1px solid #e5e7eb;border-radius:10px;font-size:15px;
+    }
+    .login-card button{
+      width:100%;padding:10px;
+      background:linear-gradient(180deg,#6366f1,#4f46e5);
+      color:white;border:none;border-radius:10px;font-weight:600;cursor:pointer;
+    }
+    .login-card button:hover{transform:scale(1.02)}
+    .login-card .link{margin-top:10px;font-size:14px;color:#4f46e5;cursor:pointer;}
+
+    /* ==================== APP ==================== */
+    .app{
+      max-width:1100px;
+      margin:0 auto;
+      display:grid;
+      grid-template-columns:320px 1fr;
+      gap:28px;
+      align-items:start;
+    }
+
+    /* Sidebar */
+    .sidebar{
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:18px;
+      box-shadow:var(--shadow);
+      position:sticky;
+      top:28px;
+      height:calc(100vh - 56px);
+      overflow:auto;
+    }
+    .brand{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+    .logo{
+      width:44px;height:44px;border-radius:10px;
+      background:linear-gradient(135deg,var(--accent),#8b5cf6);
+      display:flex;align-items:center;justify-content:center;color:white;font-weight:700;
+      box-shadow:0 6px 18px rgba(99,102,241,0.22)
+    }
+    h1{font-size:18px;margin:0}
+    p.hint{margin:6px 0 14px;color:var(--muted);font-size:13px}
+
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .btn{
+      border:0;padding:10px 12px;border-radius:10px;
+      background:linear-gradient(180deg,#ffffff,#f6f7ff);
+      cursor:pointer;box-shadow:0 2px 6px rgba(2,6,23,0.04);font-weight:600
+    }
+    .btn.primary{background:linear-gradient(180deg,var(--accent),#4f46e5);color:white}
+    .btn.ghost{background:transparent;border:1px solid #eef2ff}
+    .search{display:flex;gap:8px;margin-bottom:12px}
+    .search input{flex:1;padding:10px;border-radius:10px;border:1px solid #e6e9ef}
+
+    .list{display:flex;flex-direction:column;gap:8px}
+    .note-item{
+      display:flex;gap:10px;align-items:center;padding:10px;border-radius:10px;
+      border:1px solid #f1f3f8;cursor:pointer;background:linear-gradient(180deg,#fff,#fbfdff)
+    }
+    .note-item.active{outline:3px solid rgba(99,102,241,0.12)}
+    .note-title{font-weight:700}
+    .note-meta{font-size:12px;color:var(--muted)}
+
+    /* Main */
+    .editor-card{
+      background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);
+    }
+    .editor-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+    .title-input{font-size:20px;border:0;outline:0;font-weight:700;background:transparent;width:100%}
+    .editor{min-height:320px;border-radius:12px;border:1px dashed #eef2ff;padding:14px}
+    .editor [contenteditable]{min-height:240px;outline:none}
+
+    .actions{display:flex;gap:8px}
+    .tag{font-size:12px;padding:6px 8px;border-radius:999px;background:#f3f4f6;color:#374151}
+
+    .footer{margin-top:12px;color:var(--muted);font-size:13px}
+
+    @media(max-width:900px){
+      .app{grid-template-columns:1fr}
+      .sidebar{position:relative;height:auto}
+    }
+    @media(max-width:600px){
+      body{padding:12px;}
+      .btn{padding:12px 14px;font-size:15px}
+      .title-input{font-size:18px;}
+      .editor{min-height:200px;}
+    }
+
+    /* Modal Slider */
+    .modal{
+      position:fixed;inset:0;background:rgba(0,0,0,0.7);
+      display:none;justify-content:center;align-items:center;z-index:1000;
+    }
+    .modal.active{display:flex}
+    .slider-container{
+      width:80%;max-width:800px;background:var(--card);border-radius:16px;
+      box-shadow:0 8px 28px rgba(0,0,0,0.3);padding:20px;position:relative;
+      display:flex;align-items:center;justify-content:center;min-height:400px;
+    }
+    .slide{
+      display:none;text-align:left;flex-direction:column;gap:10px;
+      max-height:60vh;overflow:auto;padding:10px;
+    }
+    .slide.active{display:flex}
+    .slider-btn{
+      position:absolute;top:50%;transform:translateY(-50%);
+      background:var(--accent);color:white;border:none;border-radius:50%;
+      width:44px;height:44px;font-size:22px;cursor:pointer;
+      box-shadow:0 2px 8px rgba(0,0,0,0.25);
+    }
+    .slider-btn.prev{left:-60px}
+    .slider-btn.next{right:-60px}
+    .close-btn{
+      position:absolute;top:10px;right:10px;
+      background:var(--danger);color:white;border:none;
+      padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600;
+    }
+
+    .note-item,.btn,.editor{transition:all .18s ease}
+    .note-item:hover{transform:translateY(-2px)}
+  </style>
+</head>
+<body>
+  <!-- === LOGIN OVERLAY === -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <h2 id="loginTitle">Вход</h2>
+      <input type="text" id="loginUser" placeholder="Имя пользователя">
+      <input type="password" id="loginPass" placeholder="Пароль">
+      <button id="loginAction">Войти</button>
+      <div class="link" id="loginToggle">Нет аккаунта? Зарегистрируйтесь</div>
+    </div>
+  </div>
+
+  <!-- === MAIN APP === -->
+  <div class="app" style="display:none" id="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">N</div>
+        <div>
+          <h1>Notes</h1>
+          <p class="hint">Локальная записная книжка</p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" id="addBtn">+ Новая</button>
+        <button class="btn" id="exportBtn">Экспорт</button>
+        <button class="btn ghost" id="sliderBtn">Слайдер</button>
+      </div>
+
+      <div class="search">
+        <input id="search" placeholder="Поиск...">
+      </div>
+
+      <div class="list" id="notesList" aria-live="polite"></div>
+
+      <div class="footer">
+        Сохранение — автоматически.<br>
+        Пользователь: <b id="userDisplay"></b> | <a href="#" id="logout">Выйти</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="editor-card">
+        <div class="editor-top">
+          <input id="titleInput" class="title-input" placeholder="Название заметки" />
+          <div class="actions">
+            <span class="tag" id="dateTag">—</span>
+            <button class="btn" id="pinBtn">📌</button>
+            <button class="btn" id="deleteBtn">Удалить</button>
+          </div>
+        </div>
+        <div class="editor" id="editor">
+          <div id="contentEditable" contenteditable="true" spellcheck="true" style="white-space:pre-wrap"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Slider -->
+  <div class="modal" id="sliderModal">
+    <div class="slider-container">
+      <button class="slider-btn prev" id="prevSlide">←</button>
+      <div id="slidesWrapper"></div>
+      <button class="slider-btn next" id="nextSlide">→</button>
+      <button class="close-btn" id="closeSlider">Закрыть</button>
+    </div>
+  </div>
+
+  <script>
+    /* ======== LOGIN ======== */
+    const loginScreen=document.getElementById('loginScreen');
+    const app=document.getElementById('app');
+    const loginUser=document.getElementById('loginUser');
+    const loginPass=document.getElementById('loginPass');
+    const loginAction=document.getElementById('loginAction');
+    const loginToggle=document.getElementById('loginToggle');
+    const loginTitle=document.getElementById('loginTitle');
+    let loginMode='login';
+
+    const users=JSON.parse(localStorage.getItem('notes_users')||'{}');
+    const loggedUser=localStorage.getItem('notes_logged_user');
+
+    if(loggedUser){ showApp(); } else { showLogin(); }
+
+    function showLogin(){ loginScreen.style.display='flex'; app.style.display='none'; }
+    function showApp(){ loginScreen.style.display='none'; app.style.display='grid'; startApp(); }
+
+    loginToggle.addEventListener('click',()=>{
+      loginMode=loginMode==='login'?'register':'login';
+      loginTitle.textContent=loginMode==='login'?'Вход':'Регистрация';
+      loginAction.textContent=loginMode==='login'?'Войти':'Создать';
+      loginToggle.textContent=loginMode==='login'?'Нет аккаунта? Зарегистрируйтесь':'Уже есть аккаунт? Войти';
+    });
+
+    loginAction.addEventListener('click',()=>{
+      const u=loginUser.value.trim(),p=loginPass.value.trim();
+      if(!u||!p)return alert('Введите имя и пароль');
+      let all=JSON.parse(localStorage.getItem('notes_users')||'{}');
+      if(loginMode==='register'){
+        if(all[u])return alert('Пользователь уже существует');
+        all[u]={pass:p};
+        localStorage.setItem('notes_users',JSON.stringify(all));
+        alert('Аккаунт создан!');
+        loginMode='login';
+        loginTitle.textContent='Вход';
+        loginAction.textContent='Войти';
+        loginToggle.textContent='Нет аккаунта? Зарегистрируйтесь';
+        return;
+      }
+      if(!all[u]||all[u].pass!==p)return alert('Неверные данные');
+      localStorage.setItem('notes_logged_user',u);
+      showApp();
+    });
+
+    /* ======== MAIN APP LOGIC ======== */
+    function startApp(){
+      const STORAGE_KEY='notes_'+localStorage.getItem('notes_logged_user');
+      let notes=[]; let currentId=null;
+      const notesList=document.getElementById('notesList');
+      const addBtn=document.getElementById('addBtn');
+      const titleInput=document.getElementById('titleInput');
+      const contentEditable=document.getElementById('contentEditable');
+      const dateTag=document.getElementById('dateTag');
+      const deleteBtn=document.getElementById('deleteBtn');
+      const searchInput=document.getElementById('search');
+      const exportBtn=document.getElementById('exportBtn');
+      const pinBtn=document.getElementById('pinBtn');
+      const sliderBtn=document.getElementById('sliderBtn');
+      const logout=document.getElementById('logout');
+      const userDisplay=document.getElementById('userDisplay');
+      const sliderModal=document.getElementById('sliderModal');
+      const slidesWrapper=document.getElementById('slidesWrapper');
+      const prevSlide=document.getElementById('prevSlide');
+      const nextSlide=document.getElementById('nextSlide');
+      const closeSlider=document.getElementById('closeSlider');
+
+      userDisplay.textContent=localStorage.getItem('notes_logged_user');
+      logout.addEventListener('click',()=>{localStorage.removeItem('notes_logged_user');location.reload();});
+
+      load(); renderList(); renderEditor();
+      function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(notes));}
+      function load(){
+        try{const raw=localStorage.getItem(STORAGE_KEY);notes=raw?JSON.parse(raw):[];}catch(e){notes=[]}
+      }
+      function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+      function timeFmt(ts){return new Date(ts).toLocaleString();}
+
+      addBtn.addEventListener('click',()=>{
+        const id=uid(),now=Date.now();
+        const note={id,title:'Новая заметка',content:'',created:now,updated:now,pinned:false};
+        notes.unshift(note);currentId=id;save();renderList();renderEditor();
+      });
+
+      function renderList(filter=''){
+        notesList.innerHTML='';
+        const q=filter.trim().toLowerCase();
+        const ordered=[...notes].sort((a,b)=>(b.pinned-a.pinned)||(b.updated-a.updated));
+        for(const n of ordered){
+          if(q&&!((n.title+n.content).toLowerCase().includes(q))) continue;
+          const item=document.createElement('div');
+          item.className='note-item'+(n.id===currentId?' active':'');
+          item.dataset.id=n.id;
+          item.innerHTML=`<div style="flex:1">
+            <div class="note-title">${escapeHtml(n.title)}</div>
+            <div class="note-meta">${n.pinned?'📌 ':''}${timeFmt(n.updated)}</div>
+          </div>`;
+          item.addEventListener('click',()=>{currentId=n.id;renderList();renderEditor();});
+          notesList.appendChild(item);
+        }
+        if(!notesList.children.length)
+          notesList.innerHTML='<div style="color:var(--muted);padding:10px">Нет заметок.</div>';
+      }
+
+      function renderEditor(){
+        const n=notes.find(x=>x.id===currentId);
+        if(!n){titleInput.value='';contentEditable.innerHTML='<div style="color:var(--muted)">Выберите заметку.</div>';dateTag.textContent='—';return;}
+        titleInput.value=n.title;contentEditable.innerHTML=n.content||'';dateTag.textContent='Обновлено: '+timeFmt(n.updated);pinBtn.textContent=n.pinned?'📌':'📍';
+      }
+
+      let saveTimer=null;
+      titleInput.addEventListener('input',()=>{
+        if(!currentId)return;
+        const n=notes.find(x=>x.id===currentId);if(!n)return;
+        n.title=titleInput.value||'Без названия';n.updated=Date.now();scheduleSave();renderList();
+      });
+      contentEditable.addEventListener('input',()=>{
+        if(!currentId)return;
+        const n=notes.find(x=>x.id===currentId);if(!n)return;
+        n.content=contentEditable.innerHTML;n.updated=Date.now();scheduleSave();renderList();
+      });
+      function scheduleSave(){if(saveTimer)clearTimeout(saveTimer);saveTimer=setTimeout(()=>{save();},400);}
+
+      deleteBtn.addEventListener('click',()=>{
+        if(!currentId)return alert('Нет выбранной заметки');
+        if(!confirm('Удалить заметку?'))return;
+        notes=notes.filter(x=>x.id!==currentId);
+        currentId=notes.length?notes[0].id:null;
+        save();renderList();renderEditor();
+      });
+
+      searchInput.addEventListener('input',()=>renderList(searchInput.value));
+
+      exportBtn.addEventListener('click',()=>{
+        const data=JSON.stringify({notes},null,2);
+        const blob=new Blob([data],{type:'application/json'});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');a.href=url;a.download='notes.json';a.click();URL.revokeObjectURL(url);
+      });
+
+      pinBtn.addEventListener('click',()=>{
+        if(!currentId)return;
+        const n=notes.find(x=>x.id===currentId);if(!n)return;
+        n.pinned=!n.pinned;n.updated=Date.now();save();renderList();renderEditor();
+      });
+
+      // ===== Слайдер =====
+      let slideIndex=0;
+      sliderBtn.addEventListener('click',()=>{
+        buildSlides();
+        if(!notes.length)return alert('Нет заметок');
+        sliderModal.classList.add('active');
+        showSlide(0);
+      });
+      closeSlider.addEventListener('click',()=>sliderModal.classList.remove('active'));
+      prevSlide.addEventListener('click',()=>showSlide(slideIndex-1));
+      nextSlide.addEventListener('click',()=>showSlide(slideIndex+1));
+      function buildSlides(){
+        slidesWrapper.innerHTML='';
+        for(const n of notes){
+          const slide=document.createElement('div');
+          slide.className='slide';
+          slide.innerHTML=`<h2>${escapeHtml(n.title)}</h2>
+            <p>${n.content||'<i>(пусто)</i>'}</p>
+            <div style="font-size:12px;color:var(--muted);margin-top:auto">${timeFmt(n.updated)}</div>`;
+          slidesWrapper.appendChild(slide);
+        }
+      }
+      function showSlide(i){
+        const slides=[...slidesWrapper.children];
+        if(!slides.length)return;
+        slideIndex=(i+slides.length)%slides.length;
+        slides.forEach((s,idx)=>s.classList.toggle('active',idx===slideIndex));
+      }
+
+      function escapeHtml(s){return s?s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'):'';}
+    }
+  </script>
+</body>
+</html>
